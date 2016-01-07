@@ -8,3 +8,9 @@
 (define pkg-desc "implementation (no documentation) part of \"profile\"")
 
 (define pkg-authors '(eli stamourv))
+
+(define raco-commands
+  '(("profile"
+     profile/raco
+     "profile execution time"
+     #f)))
