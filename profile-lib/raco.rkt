@@ -61,3 +61,5 @@
          (profile-thunk t
                         #:threads threads?
                         #:use-errortrace? use-errortrace?)]))
+
+(module test racket/base) ; don't run for testing
