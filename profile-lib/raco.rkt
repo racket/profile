@@ -18,13 +18,13 @@
                 [("--delay") n
                  "Sampling rate (seconds)"
                  (let ([n* (string->number n)])
-                   (unless (real? n)
+                   (unless (real? n*)
                      (raise-argument-error 'raco-profile "real?" n*))
                    (set! delay n*))]
                 [("--repeat") n
                  "Number of iterations"
                  (let ([n* (string->number n)])
-                   (unless (integer?)
+                   (unless (integer? n*)
                      (raise-argument-error 'raco-profile "integer?" n*))
                    (set! iterations n*))]
                 [("--all-threads")
