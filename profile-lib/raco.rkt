@@ -40,7 +40,11 @@
                 (if use-errortrace?
                     (make-errortrace-compile-handler)
                     (current-compile))])
-  (define (t) (dynamic-require (module-to-profile file) #f))
+  (define (t)
+    (collect-garbage)
+    (collect-garbage)
+    (collect-garbage)
+    (dynamic-require (module-to-profile file) #f))
   (cond [(and delay iterations)
          (profile-thunk t
                         #:delay delay
