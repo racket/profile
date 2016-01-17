@@ -14,3 +14,5 @@
      profile/raco
      "profile execution time"
      #f)))
+
+(define version "1.1")
