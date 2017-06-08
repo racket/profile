@@ -53,10 +53,13 @@
                     (make-errortrace-compile-handler)
                     (current-compile))])
   (define (t)
-    (collect-garbage)
-    (collect-garbage)
-    (collect-garbage)
-    (dynamic-require (module-to-profile file) #f))
+    ;; use a fresh namespace every time, to play nice with --repeat
+    ;; otherwise, the 2nd+ `dynamic-require`s are no-ops
+    (parameterize ([current-namespace (make-base-empty-namespace)])
+      (dynamic-require (module-to-profile file) #f)))
+  (collect-garbage)
+  (collect-garbage)
+  (collect-garbage)
   (cond [(and delay iterations)
          (profile-thunk t
                         #:delay delay
