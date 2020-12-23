@@ -5,7 +5,8 @@
                      racket/contract
                      profile/analyzer
                      (prefix-in text: profile/render-text)
-                     (prefix-in graphviz: profile/render-graphviz)))
+                     (prefix-in graphviz: profile/render-graphviz)
+                     (prefix-in json: profile/render-json)))
 
 @title[#:tag "renderers"]{Profile Renderers}
 
@@ -138,3 +139,18 @@ of the Graphviz tools to render.  Nodes are colored according to their
 
 The keyword arguments control hiding nodes in the same way as with the
 textual renderer. The @racket[order] argument is ignored.}
+
+@;--------------------------------------------------------------------
+@section{JSON Rendering}
+
+@defmodule[profile/render-json]
+
+@defproc[(render [profile-data profile?]) void?]{
+
+Converts the given @racket[profile] results to a @racket[jsexpr?],
+which can be converted to JSON format using the @racket[json] package.
+
+This module is intended for transmitting profile information between
+threads or machines. It does not fully preserve source locations, and
+of course if those source locations are transmitted between machines
+they may not match local file names.}
