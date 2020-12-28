@@ -1,13 +1,13 @@
 #lang racket/base
 
-(provide render)
+(provide profile->json json->profile)
 
 (require "structs.rkt" racket/dict racket/format racket/list racket/string)
 
 (define (node-loc node)
   (cons (node-id node) (node-src node)))
 
-(define (render p)
+(define (profile->json p)
   (define nodes (cons (profile-*-node p) (profile-nodes p)))
   (define loc-hash
     (for/hash ([node (in-list nodes)] [n (in-naturals)])

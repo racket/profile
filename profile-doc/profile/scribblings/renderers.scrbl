@@ -145,7 +145,7 @@ textual renderer. The @racket[order] argument is ignored.}
 
 @defmodule[profile/render-json]
 
-@defproc[(render [profile-data profile?]) void?]{
+@defproc[(profile->json [profile-data profile?]) jsexpr?]{
 
 Converts the given @racket[profile] results to a @racket[jsexpr?],
 which can be converted to JSON format using the @racket[json] package.
@@ -154,3 +154,11 @@ This module is intended for transmitting profile information between
 threads or machines. It does not fully preserve source locations, and
 of course if those source locations are transmitted between machines
 they may not match local file names.}
+
+@defproc[(json->profile [json-data jsexpr?]) profile?]{
+
+The inverse of the @racket[profile->json] function, transforming an
+@racket[jsexpr?] read from a JSON file back into a Racket
+@racket[profile] object. It is not a perfect inverse (source locations
+may not be preserved) but can be used for transmitting profile
+information between different processes or machines.}
