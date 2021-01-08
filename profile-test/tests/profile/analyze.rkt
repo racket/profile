@@ -107,3 +107,16 @@
      [bad (error 'test ">>> ~s" bad)])
 
    ))
+
+(provide merge-test)
+(module+ main (merge-tests))
+(define (merge-tests)
+  (define (workload n) (if (= n 0) '(0 1) (cartesian-product (workload (- n 1)) '(0 1))))
+  (test
+   (define p1 (let/ec ec (profile-thunk (lambda () (workload 20)) #:render (lambda (a b) (ec a)))))
+   (define p2 (let/ec ec (profile-thunk (lambda () (workload 20)) #:render (lambda (a b) (ec a)))))
+   (define pm (profile-merge p1 p2))
+   (unless (= (profile-total-time pm) (+ (profile-total-time p1) (profile-total-time p2)))
+     (error 'test "Total time does not match"))
+   (unless (= (profile-cpu-time pm) (+ (profile-cpu-time p1) (profile-cpu-time p2)))
+     (error 'test "Total time does not match"))))
