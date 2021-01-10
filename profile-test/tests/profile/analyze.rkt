@@ -108,7 +108,7 @@
 
    ))
 
-(provide merge-test)
+(provide merge-tests)
 (module+ main (merge-tests))
 (define (merge-tests)
   (define (workload n) (if (= n 0) '(0 1) (cartesian-product (workload (- n 1)) '(0 1))))
