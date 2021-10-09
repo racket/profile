@@ -10,3 +10,6 @@
 (define pkg-desc "Libraries for statistical performance profiling")
 
 (define pkg-authors '(eli))
+
+(define license
+  '(Apache-2.0 OR MIT))
