@@ -56,7 +56,7 @@
           (set-node-thread-ids! node (cons thread-id tids)))
         node))
     (define counts (get-counts stack))
-    (define stack+counts (map (λ (x) (assq x counts)) stack))
+    (define stack+counts (map (λ (x) (cons x (hash-ref counts x))) stack))
     (define edges
       (if (null? stack)
         '()
@@ -68,8 +68,8 @@
                   (connect (car caller) (car callee)
                            (cdr caller) (cdr callee))))))
     (set! total-time (+ msecs total-time))
-    (for ([p (in-list counts)])
-      (set-node-total! (car p) (+ msecs (node-total (car p)))))
+    (for ([n (in-hash-keys counts)])
+      (set-node-total! n (+ msecs (node-total n))))
     (for ([e (remove-duplicates edges eq?)])
       (set-edge-total! e (+ msecs (edge-total e))))
     (vector-set! thread-times thread-id
@@ -122,23 +122,24 @@
 
 ;; returns a list of (cons item occurrences) for the items in l
 (define (get-counts l)
-  (let loop ([l l] [r '()])
-    (if (null? l)
-      r
-      (let ([1st (car l)])
-        (let loop* ([l1 '()] [c 1] [l (cdr l)])
-          (cond [(null? l) (loop l1 (cons (cons 1st c) r))]
-                [(eq? 1st (car l)) (loop* l1 (add1 c) (cdr l))]
-                [else (loop* (cons (car l) l1) c (cdr l))]))))))
+  (define h (make-hasheq))
+  (for ([x (in-list l)])
+    (hash-update! h x add1 0))
+  h)
 
 (module+ test
-  (check-equal? (get-counts '()) '())
-  (check-equal? (get-counts '(1)) '([1 . 1]))
-  (check-equal? (get-counts '(1 1 1)) '([1 . 3]))
-  (define (set=? xs ys) (null? (append (remove* xs ys) (remove* ys xs))))
-  (check set=? (get-counts '(1 2 3)) '([1 . 1] [2 . 1] [3 . 1]))
-  (check set=? (get-counts '(1 2 2 3 3 3)) '([1 . 1] [2 . 2] [3 . 3]))
-  (check set=? (get-counts '(3 1 2 3 2 3)) '([1 . 1] [2 . 2] [3 . 3])))
+  (define (hash=? a b)
+    (and
+     (for/and ([(k v) (in-hash a)])
+       (= v (hash-ref b k)))
+     (for/and ([(k v) (in-hash b)])
+       (= v (hash-ref a k)))))
+  (check hash=? (get-counts '()) #hasheq())
+  (check hash=? (get-counts '(1)) #hasheq([1 . 1]))
+  (check hash=? (get-counts '(1 1 1)) #hasheq([1 . 3]))
+  (check hash=? (get-counts '(1 2 3)) #hasheq([1 . 1] [2 . 1] [3 . 1]))
+  (check hash=? (get-counts '(1 2 2 3 3 3)) #hasheq([1 . 1] [2 . 2] [3 . 3]))
+  (check hash=? (get-counts '(3 1 2 3 2 3)) #hasheq([1 . 1] [2 . 2] [3 . 3])))
 
 (define (node-loc node)
   (cons (node-id node) (node-src node)))
