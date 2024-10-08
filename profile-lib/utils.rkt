@@ -74,20 +74,27 @@
     (cons node (mcons (sum node-callers edge-caller edge-callee-time)
                       (sum node-callees edge-callee edge-caller-time))))
   (define nodes+io-times
-    (let loop ([todo (list root)] [r '()])
-      (if (pair? todo)
-        (let* ([cur (car todo)] [todo (cdr todo)]
-               [r (if (eq? cur root) r (cons (get-node+io cur) r))])
-          (loop (append todo ; append new things in the end, so it's a BFS
-                        (filter-map (λ (e)
-                                      (define lee (edge-callee e))
-                                      (and (not (memq lee todo))
-                                           (not (assq lee r))
-                                           lee))
-                                    (node-callees cur)))
-                r))
-        ;; note: the result does not include the root node
-        r)))
+    (let ([rhash (make-hasheq)] [todohash (make-hasheq (list (cons root #t)))])
+      (let loop ([todo (list root)] [r '()])
+        (if (pair? todo)
+          (let* ([cur (car todo)] [todo (cdr todo)]
+                 [r (if (eq? cur root) r (cons (get-node+io cur) r))])
+            (hash-remove! todohash cur)
+            (unless (eq? cur root) (hash-set! rhash cur #t))
+            (define new-things
+              (filter-map (λ (e)
+                            (define lee (edge-callee e))
+                            (and (not (hash-has-key? todohash lee))
+                                 (not (hash-has-key? rhash lee))
+                                 lee))
+                          (node-callees cur)))
+            (for ([new-thing (in-list new-things)])
+              (hash-set! todohash new-thing #t))
+            (loop (append todo ; append new things in the end, so it's a BFS
+                          new-things)
+                  r))
+          ;; note: the result does not include the root node
+          r))))
 
   ;; Now create a linear order similar to the way section 9.4 describes, except
   ;; that this uses the total caller/callee times to get an even better
