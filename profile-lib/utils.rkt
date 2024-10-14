@@ -65,46 +65,50 @@
   ;; Make `nodes+io-times' map a node to an mcons of total input and total
   ;; output times ignoring edges to/from the *-node and self edges, the order
   ;; is the reverse of how we scan the graph
-  (define (get-node+io node)
+  (define (get-io node)
     (define (sum node-callers/lees edge-caller/lee edge-callee/ler-time)
       (for/fold ([sum 0]) ([e (in-list (node-callers/lees node))])
         (define n (edge-caller/lee e))
         (if (or (eq? n node) (eq? n root)) sum
             (+ sum (edge-callee/ler-time e)))))
-    (cons node (mcons (sum node-callers edge-caller edge-callee-time)
-                      (sum node-callees edge-callee edge-caller-time))))
+    (mcons (sum node-callers edge-caller edge-callee-time)
+           (sum node-callees edge-callee edge-caller-time)))
+
+  (define sinks '())
+  (define sources '())
+
+  ;; note: the result does not include the root node
+  (define r (make-hash))
+
   (define nodes+io-times
-    (let ([rhash (make-hasheq)] [todohash (make-hasheq (list (cons root #t)))])
-      (let loop ([todo (list root)] [r '()])
-        (if (pair? todo)
-          (let* ([cur (car todo)] [todo (cdr todo)]
-                 [r (if (eq? cur root) r (cons (get-node+io cur) r))])
-            (hash-remove! todohash cur)
-            (unless (eq? cur root) (hash-set! rhash cur #t))
-            (define new-things
-              (filter-map (λ (e)
-                            (define lee (edge-callee e))
-                            (and (not (hash-has-key? todohash lee))
-                                 (not (hash-has-key? rhash lee))
-                                 lee))
-                          (node-callees cur)))
-            (for ([new-thing (in-list new-things)])
-              (hash-set! todohash new-thing #t))
-            (loop (append todo ; append new things in the end, so it's a BFS
-                          new-things)
-                  r))
-          ;; note: the result does not include the root node
-          r))))
+    (let loop ([todo (list root)] [todohash (make-hasheq (list (cons root #t)))])
+      (when (pair? todo)
+        (let* ([cur (car todo)] [todo (cdr todo)])
+          (hash-remove! todohash cur)
+          (define new-node (if (eq? cur root) #f (get-io cur)))
+          (when new-node
+            (hash-set! r cur new-node)
+            (when (zero? (mcdr new-node))
+              (set! sinks (cons cur sinks)))
+            (when (zero? (mcar new-node))
+              (set! sources (cons cur sources))))
+          (define new-things
+            (for*/list ([e (in-list (node-callees cur))]
+                        [lee (in-value (edge-callee e))]
+                        #:unless (hash-has-key? todohash lee)
+                        #:unless (hash-has-key? r lee))
+              (hash-set! todohash lee #t)
+              lee))
+          ; append new things in the end, so it's a BFS
+          (loop (append todo (reverse new-things)) todohash)))))
 
   ;; Now create a linear order similar to the way section 9.4 describes, except
   ;; that this uses the total caller/callee times to get an even better
   ;; ordering (also, look for sources and sinks in every step).  Note that the
   ;; list we scan is in reverse order.
   (define acyclic-order
-    (let* ([todo (make-hasheq nodes+io-times)]
-           [init-sinks (for/list ([(k v) (in-hash todo)] #:when (zero? (mcdr v))) k)]
-           [init-sources (for/list ([(k v) (in-hash todo)] #:when (zero? (mcar v))) k)])
-      (let loop ([todo todo] [rev-left '()] [right '()] [sinks init-sinks] [sources init-sources])
+    (let* ([todo r] [init-sinks (reverse sinks)] [init-sources (reverse sources)])
+      (let loop ([todo r] [rev-left '()] [right '()] [sinks init-sinks] [sources init-sources])
         ;; heuristic for best sources: the ones with the lowest intime/outtime
         (define (best-sources)
           (let loop ([todo (hash->list todo)] [r '()] [best #f])
