@@ -78,7 +78,7 @@
   (define sources '())
 
   ;; note: the result does not include the root node
-  (define r (make-hash))
+  (define r (make-hasheq))
 
   (define nodes+io-times
     (let loop ([todo (list root)] [todohash (make-hasheq (list (cons root #t)))])
@@ -107,51 +107,50 @@
   ;; ordering (also, look for sources and sinks in every step).  Note that the
   ;; list we scan is in reverse order.
   (define acyclic-order
-    (let* ([todo r] [init-sinks (reverse sinks)] [init-sources (reverse sources)])
-      (let loop ([todo r] [rev-left '()] [right '()] [sinks init-sinks] [sources init-sources])
-        ;; heuristic for best sources: the ones with the lowest intime/outtime
-        (define (best-sources)
-          (let loop ([todo (hash->list todo)] [r '()] [best #f])
-            (if (null? todo)
+    (let loop ([todo r] [rev-left '()] [right '()] [sinks (reverse sinks)] [sources (reverse sources)])
+      ;; heuristic for best sources: the ones with the lowest intime/outtime
+      (define (best-sources)
+        (let loop ([todo (hash->list todo)] [r '()] [best #f])
+          (if (null? todo)
               r
               (let* ([1st (car todo)]
                      [rest (cdr todo)]
                      [ratio (/ (mcar (cdr 1st)) (mcdr (cdr 1st)))])
                 (if (or (not best) (ratio . < . best))
-                  (loop rest (list (car 1st)) ratio)
-                  (loop rest (if (ratio . > . best) r (cons (car 1st) r)) best))))))
-  
-        (cond
-          [(hash-empty? todo)
-           ;; all done, get the order
-           (append (reverse rev-left) right)]
+                    (loop rest (list (car 1st)) ratio)
+                    (loop rest (if (ratio . > . best) r (cons (car 1st) r)) best))))))
+      
+      (cond
+        [(hash-empty? todo)
+         ;; all done, get the order
+         (append (reverse rev-left) right)]
 
-          [else
-           (for-each (lambda (sink) (hash-remove! todo sink)) sinks)
-           (define actual-sources
-             (if (and (null? sinks) (null? sources))
-                 (best-sources) sources))
-           (for-each (lambda (source) (hash-remove! todo source)) actual-sources)
-           (define sinks* '())
-           (define sources* '())
-           ;; remove the source and sink times from the rest
-           (for* ([nodes (in-list (list sources sinks))]
-                  [n (in-list nodes)])
-             (for ([e (in-list (node-callees n))])
-               (define v (hash-ref todo (edge-callee e) #f))
-               (when v
-                 (define new-car (- (mcar v) (edge-callee-time e)))
-                 (set-mcar! v new-car)
-                 (when (zero? new-car)
-                   (set! sources* (cons (edge-callee e) sources*)))))
-             (for ([e (in-list (node-callers n))])
-               (define v (hash-ref todo (edge-caller e) #f))
-               (when v
-                 (define new-cdr (- (mcdr v) (edge-caller-time e)))
-                 (set-mcdr! v new-cdr)
-                 (when (zero? new-cdr)
-                   (set! sinks* (cons (edge-caller e) sinks*))))))
-           (loop todo (append (reverse sources) rev-left) (append sinks right) sinks* sources*)]))))
+        [else
+         (for-each (lambda (sink) (hash-remove! todo sink)) sinks)
+         (define actual-sources
+           (if (and (null? sinks) (null? sources))
+               (best-sources) sources))
+         (for-each (lambda (source) (hash-remove! todo source)) actual-sources)
+         (define sinks* '())
+         (define sources* '())
+         ;; remove the source and sink times from the rest
+         (for* ([nodes (in-list (list sources sinks))]
+                [n (in-list nodes)])
+           (for ([e (in-list (node-callees n))])
+             (define v (hash-ref todo (edge-callee e) #f))
+             (when v
+               (define new-car (- (mcar v) (edge-callee-time e)))
+               (set-mcar! v new-car)
+               (when (zero? new-car)
+                 (set! sources* (cons (edge-callee e) sources*)))))
+           (for ([e (in-list (node-callers n))])
+             (define v (hash-ref todo (edge-caller e) #f))
+             (when v
+               (define new-cdr (- (mcdr v) (edge-caller-time e)))
+               (set-mcdr! v new-cdr)
+               (when (zero? new-cdr)
+                 (set! sinks* (cons (edge-caller e) sinks*))))))
+         (loop todo (append (reverse sources) rev-left) (append sinks right) sinks* sources*)])))
 
   ;; We're done, so make `t' map nodes to their callers with only edges that
   ;; are consistent with this ordering
