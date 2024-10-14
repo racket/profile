@@ -102,9 +102,9 @@
   ;; list we scan is in reverse order.
   (define acyclic-order
     (let* ([todo (make-hasheq nodes+io-times)]
-           [sinks (for/list ([(k v) (in-hash todo)] #:when (zero? (mcdr v))) k)]
-           [sources (for/list ([(k v) (in-hash todo)] #:when (zero? (mcar v))) k)])
-      (let loop ([todo todo] [rev-left '()] [right '()] [sinks sinks] [sources sources])
+           [init-sinks (for/list ([(k v) (in-hash todo)] #:when (zero? (mcdr v))) k)]
+           [init-sources (for/list ([(k v) (in-hash todo)] #:when (zero? (mcar v))) k)])
+      (let loop ([todo todo] [rev-left '()] [right '()] [sinks init-sinks] [sources init-sources])
         ;; heuristic for best sources: the ones with the lowest intime/outtime
         (define (best-sources)
           (let loop ([todo (hash->list todo)] [r '()] [best #f])
@@ -124,10 +124,10 @@
 
           [else
            (for-each (lambda (sink) (hash-remove! todo sink)) sinks)
-           (define sources
+           (define actual-sources
              (if (and (null? sinks) (null? sources))
                  (best-sources) sources))
-           (for-each (lambda (source) (hash-remove! todo source)) sources)
+           (for-each (lambda (source) (hash-remove! todo source)) actual-sources)
            (define sinks* '())
            (define sources* '())
            ;; remove the source and sink times from the rest
