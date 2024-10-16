@@ -99,37 +99,38 @@
   ;; ordering (also, look for sources and sinks in every step).  Note that the
   ;; list we scan is in reverse order.
   (define acyclic-order
-    (let loop ([todo nodes+io] [rev-left '()] [right '()])
+    (let loop ([rev-left '()] [right '()])
       ;; heuristic for best sources: the ones with the lowest intime/outtime
       (define (best-sources)
-        (for/fold ([r '()] [best #f] #:result r) ([(k v) (in-hash todo)])
+        (for/fold ([r '()] [best #f] #:result r) ([(k v) (in-hash nodes+io)])
           (define ratio (/ (mcar v) (mcdr v)))
           (if (or (not best) (ratio . < . best))
               (values (list k) ratio)
               (values (if (ratio . > . best) r (cons k r)) best))))
-      (if (hash-empty? todo)
+      (if (hash-empty? nodes+io)
           (append (reverse rev-left) right)
           (let* ([sinks
-                  (for/list ([(k v) (in-hash todo)] #:when (zero? (mcdr v))) k)]
-                 [_    (for ([k (in-list sinks)]) (hash-remove! todo k))]
+                  (for/list ([(k v) (in-hash nodes+io)] #:when (zero? (mcdr v))) k)]
                  [sources
-                  (for/list ([(k v) (in-hash todo)] #:when (zero? (mcar v))) k)]
+                  (for/list ([(k v) (in-hash nodes+io)] #:when (zero? (mcar v))) k)]
                  ;; if we have no sources and sinks, use the heuristic
                  [sources (if (and (null? sinks) (null? sources))
                               (best-sources) sources)]
-                 [_    (for ([k (in-list sources)]) (hash-remove! todo k))])
+                 [sources (set-subtract sources sinks)])
+            (for ([k (in-list sinks)]) (hash-remove! nodes+io k))
+            (for ([k (in-list sources)]) (hash-remove! nodes+io k))
             ;; remove the source and sink times from the rest
             (for* ([nodes (in-list (list sources sinks))]
                    [n (in-list nodes)])
               (for ([e (in-list (node-callees n))])
-                (define x (hash-ref todo (edge-callee e) #f))
+                (define x (hash-ref nodes+io (edge-callee e) #f))
                 (when x
                   (set-mcar! x (- (mcar x) (edge-callee-time e)))))
               (for ([e (in-list (node-callers n))])
-                (define x (hash-ref todo (edge-caller e) #f))
+                (define x (hash-ref nodes+io (edge-caller e) #f))
                 (when x
                   (set-mcdr! x (- (mcdr x) (edge-caller-time e))))))
-            (loop todo (append (reverse sources) rev-left) (append sinks right))))))
+            (loop (append (reverse sources) rev-left) (append sinks right))))))
   
   ;; We're done, so make `t' map nodes to their callers with only edges that
   ;; are consistent with this ordering
