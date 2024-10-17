@@ -128,18 +128,12 @@
   h)
 
 (module+ test
-  (define (hash=? a b)
-    (and
-     (for/and ([(k v) (in-hash a)])
-       (= v (hash-ref b k)))
-     (for/and ([(k v) (in-hash b)])
-       (= v (hash-ref a k)))))
-  (check hash=? (get-counts '()) #hasheq())
-  (check hash=? (get-counts '(1)) #hasheq([1 . 1]))
-  (check hash=? (get-counts '(1 1 1)) #hasheq([1 . 3]))
-  (check hash=? (get-counts '(1 2 3)) #hasheq([1 . 1] [2 . 1] [3 . 1]))
-  (check hash=? (get-counts '(1 2 2 3 3 3)) #hasheq([1 . 1] [2 . 2] [3 . 3]))
-  (check hash=? (get-counts '(3 1 2 3 2 3)) #hasheq([1 . 1] [2 . 2] [3 . 3])))
+  (check equal? (get-counts '()) (make-hasheq))
+  (check equal? (get-counts '(1)) (make-hasheq '([1 . 1])))
+  (check equal? (get-counts '(1 1 1)) (make-hasheq '([1 . 3])))
+  (check equal? (get-counts '(1 2 3)) (make-hasheq '([1 . 1] [2 . 1] [3 . 1])))
+  (check equal? (get-counts '(1 2 2 3 3 3)) (make-hasheq '([1 . 1] [2 . 2] [3 . 3])))
+  (check equal? (get-counts '(3 1 2 3 2 3)) (make-hasheq '([1 . 1] [2 . 2] [3 . 3]))))
 
 (define (node-loc node)
   (cons (node-id node) (node-src node)))
