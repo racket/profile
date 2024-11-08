@@ -94,12 +94,14 @@
    ;; note that ((B) (A)) would also be consistent, but the code organizes for
    ;; this result
    (same-levels '(* -> A -> B -> A)
-                '((A) (B)))
+                '((A) (B))
+                '((B) (A)))
 
    ;; this is an example using the actual times for the A->B->A case that is
    ;; tested in main.rkt
    (same-levels '(* 2->1 A 1->2 B 2->1 A 1->2 *)
-                '((A) (B)))
+                '((A) (B))
+                '((B) (A)))
 
 
    (same-levels '(* -> A 2-> B -> A)
@@ -126,7 +128,8 @@
 
    (same-levels '(* -> A -> B -> A
                   * -> C)
-                '((A C) (B)))
+                '((A C) (B))
+                '((B C) (A)))
 
    (same-levels '(* -> A -> B -> *
                   * -> B -> A -> *)
