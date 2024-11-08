@@ -57,51 +57,57 @@
 
    ;; demonstrates different edge-caller/lee-times
    (match (analyze `(10
-                     [0 0 ,A ,B ,A]
+                     [0 0 ,A ,B ,A ,B]
                      [0 1 ,A ,B ,A]))
      [`(total= 2 samples= 2 cpu= 10 thread-times= ([0 . 2])
         [* total= 2 self= 0
-           callers: [A -> * time= 2 total= 2]
+           callers: [A -> * time= 1 total= 1]
+                    [B -> * time= 1 total= 1]
            callees: [* -> A time= 2 total= 2]
            threads= ()]
-        [A total= 2 self= 2
+        [A total= 2 self= 1
            callers: [B -> A time= 2/2 total= 2]
                     [* -> A time= 2/2 total= 2]
-           callees: [A -> B time= 2/2 total= 2]
-                    [A -> * time= 2/2 total= 2]
+           callees: [A -> B time= 3/2 total= 2]
+                    [A -> * time= 1/2 total= 1]
            threads= (0)]
-        [B total= 2 self= 0
+        [B total= 2 self= 1
            callers: [A -> B time= 2 total= 2]
-           callees: [B -> A time= 2 total= 2]
+           callees: [B -> A time= 3/2 total= 2]
+                    [B -> * time= 1/2 total= 1]
            threads= (0)])
       'ok]
      [bad (error 'test ">>> ~s" bad)])
 
    (match (analyze `(10
-                     [0 0 ,A ,B ,A]
-                     [0 1 ,A ,C ,A]
-                     [0 2 ,A ,C ,A]
-                     [0 3 ,A ,C ,A]))
+                           [0 0 ,A ,B ,A ,B]
+                           [0 1 ,A ,C ,A ,C]
+                           [0 2 ,A ,C ,A ,C]
+                           [0 3 ,A ,C ,A]))
      [`(total= 4 samples= 4 cpu= 10 thread-times= ([0 . 4])
         [* total= 4 self= 0
-           callers: [A -> * time= 4 total= 4]
+           callers: [A -> * time= 1 total= 1]
+                    [C -> * time= 2 total= 2]
+                    [B -> * time= 1 total= 1]
            callees: [* -> A time= 4 total= 4]
            threads= ()]
-        [A total= 4 self= 4
+        [A total= 4 self= 1
            callers: [* -> A time= 4/2 total= 4]
                     [C -> A time= 3/2 total= 3]
                     [B -> A time= 1/2 total= 1]
-           callees: [A -> * time= 4/2 total= 4]
-                    [A -> C time= 3/2 total= 3]
-                    [A -> B time= 1/2 total= 1]
+           callees: [A -> C time= 5/2 total= 3]
+                    [A -> B time= 2/2 total= 1]
+                    [A -> * time= 1/2 total= 1]
            threads= (0)]
-        [C total= 3 self= 0
+        [C total= 3 self= 2
            callers: [A -> C time= 3 total= 3]
-           callees: [C -> A time= 3 total= 3]
+           callees: [C -> A time= 2 total= 3]
+                    [C -> * time= 1 total= 2]
            threads= (0)]
-        [B total= 1 self= 0
+        [B total= 1 self= 1
            callers: [A -> B time= 1 total= 1]
-           callees: [B -> A time= 1 total= 1]
+           callees: [B -> A time= 1/2 total= 1]
+                    [B -> * time= 1/2 total= 1]
            threads= (0)])
       'ok]
      [bad (error 'test ">>> ~s" bad)])
