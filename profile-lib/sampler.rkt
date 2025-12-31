@@ -132,10 +132,8 @@
     (sleep delay)
     (define run-again?
       (let loop ([t weak-to-track])
-        (cond [(paused . > . 0)
-               #t]
-              [(eq? t sampler-thread)
-               #f]
+        (cond [(paused . > . 0) #t]
+              [(eq? t sampler-thread) #f]
               [(thread? t)
                (when custom-keys
                  (set! custom-snapshots
