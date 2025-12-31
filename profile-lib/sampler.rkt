@@ -130,37 +130,41 @@
 
   (define (sampler)
     (sleep delay)
-    (define any-left? #f)
-    (when (paused . <= . 0)
+    (define run-again?
       (let loop ([t weak-to-track])
-        (cond [(thread? t)
-               (set! any-left? #t)
-               (unless (eq? t sampler-thread)
-                 (when custom-keys
-                   (set! custom-snapshots
-                         (cons (continuation-mark-set->list*
-                                (continuation-marks t)
-                                custom-keys) ; frames
-                               custom-snapshots)))
-                 (set! snapshots
-                       (cons (list* (thread-id t)
-                                    (current-process-milliseconds t)
-                                    (if do-errortrace
-                                        (for/list ([frame (in-list
-                                                           (continuation-mark-set->list
-                                                            (continuation-marks t)
-                                                            errortrace-key))])
-                                            (intern-entry (errortrace-preprocess frame)))
-                                        (map intern-entry
-                                             (continuation-mark-set->context
-                                              (continuation-marks t)))))
-                             snapshots)))]
+        (cond [(paused . > . 0)
+               #t]
+              [(eq? t sampler-thread)
+               #f]
+              [(thread? t)
+               (when custom-keys
+                 (set! custom-snapshots
+                       (cons (continuation-mark-set->list*
+                              (continuation-marks t)
+                              custom-keys) ; frames
+                             custom-snapshots)))
+               (set! snapshots
+                     (cons (list* (thread-id t)
+                                  (current-process-milliseconds t)
+                                  (if do-errortrace
+                                      (for/list ([frame (in-list
+                                                         (continuation-mark-set->list
+                                                          (continuation-marks t)
+                                                          errortrace-key))])
+                                        (intern-entry (errortrace-preprocess frame)))
+                                      (map intern-entry
+                                           (continuation-mark-set->context
+                                            (continuation-marks t)))))
+                           snapshots))
+               #t]
               [(custodian? t)
-               (for-each loop (custodian-managed-list t super-cust))]
+               (for-each loop (custodian-managed-list t super-cust))
+               ;; Custodians may spawn new threads, which we will then track
+               #t]
               ;; If weak box value is GC'd, we fall through and ignore it
               [(weak-box? t) (loop (weak-box-value t))]
-              [(list? t) (for-each loop t)])))
-    (when any-left?
+              [(list? t) (ormap loop t)])))
+    (when run-again?
       (sampler)))
   (define cpu-time   0)
   (define start-time (current-process-milliseconds))
