@@ -123,11 +123,10 @@
   (define weak-to-track
     (let loop ([t to-track])
       (cond [(thread? t) (make-weak-box t)]
-            [(custodian? t) (make-weak-box t)]
             [(list? t) (map loop t)]
             ;; cannot assume that it's a list: we might get other values from
             ;; a custodian managed list
-            [else (make-weak-box t)])))
+            [else t])))
 
   (define (sampler)
     (sleep delay)
