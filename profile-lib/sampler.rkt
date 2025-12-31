@@ -116,11 +116,26 @@
               (set! next-id (add1 next-id))
               (hash-set! t thd id)
               id)))))
+
+  ;; The sampler thread must hold its watched threads weakly
+  ;; This way if the thread it's watching is dead---which means
+  ;; it'll never run again---then it too can die.
+  (define weak-to-track
+    (let loop ([t to-track])
+      (cond [(thread? t) (make-weak-box t)]
+            [(custodian? t) (make-weak-box t)]
+            [(list? t) (map loop t)]
+            ;; cannot assume that it's a list: we might get other values from
+            ;; a custodian managed list
+            [else (make-weak-box t)])))
+
   (define (sampler)
     (sleep delay)
+    (define any-left? #f)
     (when (paused . <= . 0)
-      (let loop ([t to-track])
+      (let loop ([t weak-to-track])
         (cond [(thread? t)
+               (set! any-left? #t)
                (unless (eq? t sampler-thread)
                  (when custom-keys
                    (set! custom-snapshots
@@ -143,10 +158,11 @@
                              snapshots)))]
               [(custodian? t)
                (for-each loop (custodian-managed-list t super-cust))]
-              ;; cannot assume that it's a list: we might get other values from
-              ;; a custodian managed list
+              ;; If weak box value is GC'd, we fall through and ignore it
+              [(weak-box? t) (loop (weak-box-value t))]
               [(list? t) (for-each loop t)])))
-    (sampler))
+    (when any-left?
+      (sampler)))
   (define cpu-time   0)
   (define start-time (current-process-milliseconds))
   (define (add-time)
